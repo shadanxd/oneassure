@@ -15,19 +15,19 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl = "token")
 
 
 class User(BaseModel):
-    username: str
-    name: str
-    phone: int
-    password: str
+    username: str = "John_Doe"
+    name: str = "john123"
+    phone: int = "1234"
+    password: str = "john@123"
     Description: Optional[str] = None
 
 
 @app.put('/signup/')
-def signup(user: User):
+async def signup(user: User):
     item = {"_id": user.username, "name": user.name, "phone": user.phone,
             "password": AuthHandler.get_password_hash(user.password), "Description": user.Description,
             "Key": generate_random()}
-    Data.save(item)
+    await Data.save(item)
     return user
 
 
@@ -37,11 +37,11 @@ def generate_random():
 
 
 @app.post('/login')
-def login(form_data: OAuth2PasswordRequestForm = Depends()):
+async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     username = form_data.username
     password = form_data.password
     user = Data(username)
-    hashed_password = user.user_query()
+    hashed_password = await user.user_query()
     if hashed_password and AuthHandler.verify_password(password, hashed_password):
         return AuthHandler.encode_token(username)
     else:
@@ -49,25 +49,25 @@ def login(form_data: OAuth2PasswordRequestForm = Depends()):
 
 
 @app.post('/login/update/phone/{username}/{number}')
-def update(username: str, number: int, payload: dict = Depends(AuthHandler.decode_token)):
+async def update(username: str, number: int, payload: dict = Depends(AuthHandler.decode_token)):
     if payload['sub'] == username:
-        Data(payload['sub']).update_phone(number)
+        await Data(payload['sub']).update_phone(number)
     else:
         return HTTPException(status_code = 401, detail = 'Invalid Token')
 
 
 @app.post('/login/update/name/{username}/{new_name}')
-def name_update(username: str, new_name: str, payload: dict = Depends(AuthHandler.decode_token)):
+async def name_update(username: str, new_name: str, payload: dict = Depends(AuthHandler.decode_token)):
     if payload['sub'] == username:
-        Data(payload['sub']).name_update(new_name)
+        await Data(payload['sub']).name_update(new_name)
     else:
         return HTTPException(status_code = 401, detail = 'Invalid Token')
 
 
 @app.get('/login/getDetails/{username}')
-def getDetails(username: str, payload: dict = Depends(AuthHandler.decode_token)):
+async def getDetails(username: str, payload: dict = Depends(AuthHandler.decode_token)):
     if payload['sub'] == username:
-        return Data(payload['sub']).getUserDetails()
+        return await Data(payload['sub']).getUserDetails()
     else:
         return HTTPException(status_code = 401, detail = 'Invalid Token')
 
