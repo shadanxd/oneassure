@@ -1,11 +1,13 @@
 import jwt
+import os
 from fastapi import HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
+from dotenv import load_dotenv
 
-with open('secretkey.txt') as f:
-    secret: str = f.readline().strip('\n')
+load_dotenv()
+secret = os.environ.get('secret')
 
 
 class AuthHandler:
