@@ -4,7 +4,7 @@ from typing import Optional
 import uvicorn
 from fastapi import Depends
 from fastapi import FastAPI, HTTPException
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from auth import AuthHandler
 from database import Data
