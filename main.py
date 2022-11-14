@@ -11,21 +11,19 @@ from database import Data
 
 app = FastAPI()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl = "token")
-
 
 class User(BaseModel):
     username: str = "John_Doe"
     name: str = "john123"
     phone: int = "1234"
     password: str = "john@123"
-    Description: Optional[str] = None
+    description: Optional[str] = None
 
 
 @app.put('/signup/')
 async def signup(user: User):
     item = {"_id": user.username, "name": user.name, "phone": user.phone,
-            "password": AuthHandler.get_password_hash(user.password), "Description": user.Description,
+            "password": AuthHandler.get_password_hash(user.password), "description": user.description,
             "Key": generate_random()}
     await Data.save(item)
     return user
