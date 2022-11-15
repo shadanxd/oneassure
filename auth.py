@@ -1,18 +1,19 @@
 import jwt
-import os
+import json
 from fastapi import HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
-from dotenv import load_dotenv
-
-load_dotenv()
-secret = os.environ.get('secret')
 
 
 class AuthHandler:
     security = HTTPBearer()
     pwd_context = CryptContext(schemes = ['bcrypt'], deprecated='auto')
+    f = open('config.json')
+    config = json.load(f)
+    f.close()
+    secret = config["secret"]
+    timeout = config["token timeout"]
 
     @classmethod
     def get_password_hash(cls, password: str):
@@ -24,15 +25,15 @@ class AuthHandler:
 
     @classmethod
     def encode_token(cls, username):
-        payload = {'exp': datetime.utcnow() + timedelta(days = 0, minutes = 5),
+        payload = {'exp': datetime.utcnow() + timedelta(days = 0, minutes = cls.timeout),
                    'iat': datetime.utcnow(), 'sub': username}
 
-        return jwt.encode(payload, secret, algorithm='HS256')
+        return jwt.encode(payload, cls.secret, algorithm='HS256')
 
     @classmethod
     def decode_token(cls, token):
         try:
-            payload = jwt.decode(token, secret, algorithms=['HS256'])
+            payload = jwt.decode(token, cls.secret, algorithms=['HS256'])
             return payload
         except jwt.ExpiredSignatureError:
             raise HTTPException(status_code = 401, detail = 'Signature has expired')
