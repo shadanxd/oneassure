@@ -11,7 +11,7 @@ db = cluster["Cluster0"]
 collections = db["OneAssure"]
 
 
-class Data:
+class DBHandler:
     def __init__(self, username: str):
         self.username = username
 

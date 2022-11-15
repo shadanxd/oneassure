@@ -7,7 +7,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 from auth import AuthHandler
-from database import Data
+from database import DBHandler
 
 app = FastAPI()
 
@@ -25,7 +25,7 @@ async def signup(user: User):
     item = {"_id": user.username, "name": user.name, "phone": user.phone,
             "password": AuthHandler.get_password_hash(user.password), "description": user.description,
             "Key": generate_random()}
-    await Data.save(item)
+    await DBHandler.save(item)
     return user
 
 
@@ -38,7 +38,7 @@ def generate_random():
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     username = form_data.username
     password = form_data.password
-    user = Data(username)
+    user = DBHandler(username)
     hashed_password = await user.user_query()
     if hashed_password and AuthHandler.verify_password(password, hashed_password):
         return AuthHandler.encode_token(username)
@@ -65,7 +65,7 @@ async def name_update(username: str, new_name: str, payload: dict = Depends(Auth
 @app.get('/login/getDetails/{username}')
 async def getDetails(username: str, payload: dict = Depends(AuthHandler.decode_token)):
     if payload['sub'] == username:
-        return await Data(payload['sub']).getUserDetails()
+        return await DBHandler(payload['sub']).getUserDetails()
     else:
         return HTTPException(status_code = 401, detail = 'Invalid Token')
 
