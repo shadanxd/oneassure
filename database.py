@@ -7,7 +7,7 @@ class DBHandler:
     f = open('config.json')
     db_credentials: dict = json.load(f)
     f.close()
-    cluster = MongoClient(f'mongodb+srv://{db_credentials["username"]}:{db_credentials["password"]}@cluster0.ef68wuq.mongodb.net/?retryWrites=true&w'
+    cluster = MongoClient(f'mongodb+srv://{db_credentials["username"]}:{db_credentials["password"]}@{db_credentials["db_host"]}/?retryWrites=true&w'
                           f'=majority')
     db = cluster["Cluster0"]
     collections = db["OneAssure"]
