@@ -2,28 +2,24 @@ from typing import Optional
 import uvicorn
 from fastapi import Depends
 from fastapi import FastAPI, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from pydantic import BaseModel
 from auth import AuthHandler
 from database import DBHandler
+import usermodels
 
 app = FastAPI()
 
 
-class User(BaseModel):
-    username: str = "John_Doe"
-    name: str = "john123"
-    phone: int = "1234"
-    password: str = "john@123"
-    description: Optional[str] = None
+oauth2_schema = OAuth2PasswordBearer(tokenUrl = "/login")
 
 
-@app.put('/signup/')
-async def signup(user: User):
-    item = {"username": user.username, "name": user.name, "phone": user.phone,
-            "password": AuthHandler.get_password_hash(user.password), "description": user.description}
-    await DBHandler.save(item)
-    return user
+@app.post('/signup/')
+async def signup(user_in: usermodels.UserIn):
+    hashed_password = AuthHandler.get_password_hash(user_in.password)
+    user_in_db = usermodels.UserInDB(**user_in.dict(), hashed_password = hashed_password)
+    await DBHandler.save(user_in_db.dict())
+    return user_in_db
 
 
 @app.post('/login')
@@ -32,13 +28,17 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     password = form_data.password
     user = await DBHandler.getUserDetails(username)
     if user is None:
-        return {"username/password": "Invalid"}
-    elif username == user['username'] and AuthHandler.verify_password(password, user['password']):
-        return {AuthHandler.encode_token(username)}
+        raise HTTPException(status_code = 401, detail = "Invalid Username")
+    else:
+        if AuthHandler.verify_password(password, user['hashed_password']):
+            return {"access_token": AuthHandler.encode_token(username)}
+        else:
+            raise HTTPException(status_code = 401, detail = "Incorrect Password")
 
 
-@app.post('/login/update/phone/{username}/{number}')
-async def update(username: str, number: int, payload: dict = Depends(AuthHandler.decode_token)):
+@app.put('/update/phone/{username}/{number}')
+async def update(username: str, number: int, token: str = Depends(oauth2_schema)):
+    payload: dict = AuthHandler.decode_token(token)
     if payload['sub'] == username:
         scope = {"username": username, "new_number": number}
         await DBHandler.update_user_details(scope)
@@ -47,8 +47,9 @@ async def update(username: str, number: int, payload: dict = Depends(AuthHandler
         return HTTPException(status_code = 401, detail = 'Invalid Token')
 
 
-@app.post('/login/update/name/{username}/{new_name}')
-async def name_update(username: str, new_name: str, payload: dict = Depends(AuthHandler.decode_token)):
+@app.put('/update/name/{username}/{new_name}')
+async def name_update(username: str, new_name: str, token: str = Depends(oauth2_schema)):
+    payload: dict = AuthHandler.decode_token(token)
     if payload['sub'] == username:
         scope = {"username": username, "new_name": new_name}
         await DBHandler.update_user_details(scope)
@@ -57,8 +58,9 @@ async def name_update(username: str, new_name: str, payload: dict = Depends(Auth
         return HTTPException(status_code = 401, detail = 'Invalid Token')
 
 
-@app.get('/login/getDetails/{username}')
-async def getDetails(username: str, payload: dict = Depends(AuthHandler.decode_token)):
+@app.get('/getDetails/{username}')
+async def getDetails(username: str, token: str = Depends(oauth2_schema)):
+    payload: dict = AuthHandler.decode_token(token)
     if payload['sub'] == username:
         user = await DBHandler.getUserDetails(username)
         return user
