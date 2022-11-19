@@ -1,19 +1,18 @@
 import jwt
-import json
-from fastapi import HTTPException, Security
-from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from fastapi import HTTPException
+from fastapi.security import HTTPBearer
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
+import os
+from dotenv import load_dotenv
 
 
 class AuthHandler:
     security = HTTPBearer()
     pwd_context = CryptContext(schemes = ['bcrypt'], deprecated='auto')
-    f = open('config.json')
-    config = json.load(f)
-    f.close()
-    secret = config["secret"]
-    timeout = config["token timeout"]
+    load_dotenv()
+    secret = os.getenv('secret')
+    timeout = os.getenv('token_timeout')
 
     @classmethod
     def get_password_hash(cls, password: str):
@@ -25,7 +24,7 @@ class AuthHandler:
 
     @classmethod
     def encode_token(cls, username):
-        payload = {'exp': datetime.utcnow() + timedelta(days = 0, minutes = cls.timeout),
+        payload = {'exp': datetime.utcnow() + timedelta(days = 0, minutes = int(cls.timeout)),
                    'iat': datetime.utcnow(), 'sub': username}
 
         return jwt.encode(payload, cls.secret, algorithm='HS256')

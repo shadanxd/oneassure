@@ -1,13 +1,15 @@
+import os
 from pymongo import MongoClient
-import json
+from dotenv import load_dotenv
 
 
 class DBHandler:
 
-    f = open('config.json')
-    db_credentials: dict = json.load(f)
-    f.close()
-    cluster = MongoClient(f'mongodb+srv://{db_credentials["username"]}:{db_credentials["password"]}@{db_credentials["db_host"]}/?retryWrites=true&w'
+    load_dotenv()
+    username = os.getenv('username')
+    password = os.getenv('password')
+    host = os.getenv('db_host')
+    cluster = MongoClient(f'mongodb+srv://{username}:{password}@{host}/?retryWrites=true&w'
                           f'=majority')
     db = cluster["Cluster0"]
     collections = db["OneAssure"]
