@@ -9,7 +9,7 @@ class DBHandler:
     username = os.getenv('username')
     password = os.getenv('password')
     host = os.getenv('db_host')
-    cluster = MongoClient(f'mongodb+srv://{username}:{password}@cluster0.ef68wuq.mongodb.net/?retryWrites=true&w'
+    cluster = MongoClient(f'mongodb+srv://{username}:{password}@{host}/?retryWrites=true&w'
                           f'=majority')
     db = cluster["Cluster0"]
     collections = db["OneAssure"]
