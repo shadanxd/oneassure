@@ -9,14 +9,17 @@ class DBHandler:
     username = os.getenv('username')
     password = os.getenv('password')
     host = os.getenv('db_host')
+    user_type = os.getenv('user_type')
     cluster = MongoClient(f'mongodb+srv://{username}:{password}@{host}/?retryWrites=true&w'
                           f'=majority')
     db = cluster["Cluster0"]
-    collections = db["OneAssure"]
+    collections = db[f'OneAssure{user_type}']
 
     @classmethod
     async def save(cls, item: dict):
-        cls.collections.insert_one(item)
+        user_type = item['type']
+        collections = cls.db[f'OneAssure{user_type}']
+        collections.insert_one(item)
 
     @classmethod
     async def update_user_details(cls, scope: dict):

@@ -13,11 +13,11 @@ oauth2_schema = OAuth2PasswordBearer(tokenUrl = "/login")
 
 
 @app.post('/signup/')
-async def signup(user_in: usermodels.UserIn):
-    hashed_password = AuthHandler.get_password_hash(user_in.password)
-    user_in_db = usermodels.UserInDB(**user_in.dict(), hashed_password = hashed_password)
-    await DBHandler.save(user_in_db.dict())
-    return user_in_db
+async def signup(user: usermodels.UserBase):
+    if await DBHandler.getUserDetails(user.username) is not None:
+        return HTTPException(status_code = 400, detail = "Username already exists")
+    await DBHandler.save(user.dict())
+    return user
 
 
 @app.post('/login')
@@ -28,7 +28,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     if user is None:
         raise HTTPException(status_code = 401, detail = "Invalid Username")
     else:
-        if AuthHandler.verify_password(password, user['hashed_password']):
+        if AuthHandler.verify_password(password, user['password']):
             return {"access_token": AuthHandler.encode_token(username)}
         else:
             raise HTTPException(status_code = 401, detail = "Incorrect Password")
