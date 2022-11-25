@@ -1,17 +1,24 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, validator, StrictInt, StrictStr
 from typing import Optional
+from auth import AuthHandler
 
 
 class UserBase(BaseModel):
     username: str = "John_Doe"
-    name: str = "john123"
-    phone: int = "1234"
-    description: Optional[str] = None
-
-
-class UserIn(UserBase):
+    name: StrictStr = "john123"
+    phone: StrictInt = 1234
+    type: Optional[str] = "Users"
     password: str
 
+    class Config:
+        anystr_strip_whitespace = True
+        max_anystr_length = 20
+        validate_all = True
+        validate_assignment = True
 
-class UserInDB(UserBase):
-    hashed_password: str
+    @validator('password')
+    def hashing(cls, pwd):
+        return AuthHandler.get_password_hash(pwd)
+
+
+

@@ -12,22 +12,24 @@ class DBHandler:
     cluster = MongoClient(f'mongodb+srv://{username}:{password}@{host}/?retryWrites=true&w'
                           f'=majority')
     db = cluster["Cluster0"]
-    collections = db["OneAssure"]
 
     @classmethod
-    async def save(cls, item: dict):
-        cls.collections.insert_one(item)
+    async def save(cls, user: dict, collection_name: str):
+        collections = cls.db[f'{collection_name}']
+        collections.insert_one(user)
 
     @classmethod
-    async def update_user_details(cls, scope: dict):
+    async def update_user_details(cls, scope: dict, collection):
+        collections = cls.db[f'{collection}']
         if 'new_name' in scope:
-            cls.collections.update_one({"username": scope['username']}, {"$set": {"name": scope['new_name']}})
+            collections.update_one({"username": scope['username']}, {"$set": {"name": scope['new_name']}})
         if 'new_number' in scope:
-            cls.collections.update_one({"username": scope['username']}, {"$set": {"phone": scope['new_number']}})
+            collections.update_one({"username": scope['username']}, {"$set": {"phone": scope['new_number']}})
 
     @classmethod
-    async def getUserDetails(cls, username: str):
-        user = cls.collections.find_one({"username": username},  {"_id": 0})
+    async def getUserDetails(cls, username: str, collection):
+        collections = cls.db[f'{collection}']
+        user = collections.find_one({"username": username},  {"_id": 0})
         if user is None:
             return None
         return user

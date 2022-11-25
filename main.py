@@ -1,3 +1,5 @@
+import os
+
 import uvicorn
 from fastapi import Depends
 from fastapi import FastAPI, HTTPException
@@ -5,30 +7,35 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from auth import AuthHandler
 from database import DBHandler
 import usermodels
+from dotenv import load_dotenv
 
 app = FastAPI()
 
 
 oauth2_schema = OAuth2PasswordBearer(tokenUrl = "/login")
+load_dotenv()
+collection_name_env = os.getenv('user_type')
+collection = f'OneAssure{collection_name_env}'
 
 
 @app.post('/signup/')
-async def signup(user_in: usermodels.UserIn):
-    hashed_password = AuthHandler.get_password_hash(user_in.password)
-    user_in_db = usermodels.UserInDB(**user_in.dict(), hashed_password = hashed_password)
-    await DBHandler.save(user_in_db.dict())
-    return user_in_db
+async def signup(user: usermodels.UserBase):
+    collection_name = f'OneAssure{user.type}'
+    if await DBHandler.getUserDetails(user.username, collection_name) is not None:
+        return HTTPException(status_code = 400, detail = "Username already exists")
+    await DBHandler.save(user.dict(), collection_name)
+    return user
 
 
 @app.post('/login')
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     username = form_data.username
     password = form_data.password
-    user = await DBHandler.getUserDetails(username)
+    user = await DBHandler.getUserDetails(username, collection)
     if user is None:
         raise HTTPException(status_code = 401, detail = "Invalid Username")
     else:
-        if AuthHandler.verify_password(password, user['hashed_password']):
+        if AuthHandler.verify_password(password, user['password']):
             return {"access_token": AuthHandler.encode_token(username)}
         else:
             raise HTTPException(status_code = 401, detail = "Incorrect Password")
@@ -39,7 +46,7 @@ async def update(username: str, number: int, token: str = Depends(oauth2_schema)
     payload: dict = AuthHandler.decode_token(token)
     if payload['sub'] == username:
         scope = {"username": username, "new_number": number}
-        await DBHandler.update_user_details(scope)
+        await DBHandler.update_user_details(scope, collection)
         return {"status": "phone number updated"}
     else:
         return HTTPException(status_code = 401, detail = 'Invalid Token')
@@ -50,7 +57,7 @@ async def name_update(username: str, new_name: str, token: str = Depends(oauth2_
     payload: dict = AuthHandler.decode_token(token)
     if payload['sub'] == username:
         scope = {"username": username, "new_name": new_name}
-        await DBHandler.update_user_details(scope)
+        await DBHandler.update_user_details(scope, collection)
         return {"status": "name updated"}
     else:
         return HTTPException(status_code = 401, detail = 'Invalid Token')
@@ -60,7 +67,7 @@ async def name_update(username: str, new_name: str, token: str = Depends(oauth2_
 async def getDetails(username: str, token: str = Depends(oauth2_schema)):
     payload: dict = AuthHandler.decode_token(token)
     if payload['sub'] == username:
-        user = await DBHandler.getUserDetails(username)
+        user = await DBHandler.getUserDetails(username, collection)
         return user
     else:
         return HTTPException(status_code = 401, detail = 'Invalid Token')
