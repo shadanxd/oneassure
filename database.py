@@ -19,14 +19,14 @@ class DBHandler:
         collections.insert_one(user)
 
     @classmethod
-    async def update(cls, scope: dict, collection):
+    async def update(cls, update_fields: dict, collection):
         collections = cls.db[f'{collection}']
-        collections.update_one({"username": scope['username']}, {"$set": scope})
+        collections.update_one({"username": update_fields['username']}, {"$set": update_fields})
 
     @classmethod
-    async def fetch(cls, username: str, collection, scope: dict):
+    async def fetch(cls, username: str, collection, excluded_fields: dict):
         collections = cls.db[f'{collection}']
-        user = collections.find_one({"username": username},  scope)
+        user = collections.find_one({"username": username},  excluded_fields)
         if user is None:
             return None
         return user

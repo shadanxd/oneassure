@@ -21,4 +21,18 @@ class UserBase(BaseModel):
         return AuthHandler.get_password_hash(pwd)
 
 
+class UserUpdate(BaseModel):
+    username: str
+    name: Optional[StrictStr] = None
+    phone: Optional[StrictInt] = None
+    type: Optional[str] = "Users"
+
+    class Config:
+        anystr_strip_whitespace = True
+        max_anystr_length = 20
+        validate_all = True
+        validate_assignment = True
+
+
+
 

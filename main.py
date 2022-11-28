@@ -43,24 +43,12 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
             raise HTTPException(status_code = 401, detail = "Incorrect Password")
 
 
-@app.put('/update/phone/{username}/{number}')
-async def update(username: str, number: int, token: str = Depends(oauth2_schema)):
+@app.put('/update/')
+async def update(user: usermodels.UserUpdate, token: str = Depends(oauth2_schema)):
     payload: dict = AuthHandler.decode_token(token)
-    if payload['sub'] == username:
-        scope = {"username": username, "phone": number}
-        await DBHandler.update(scope, collection)
-        return {"status": "phone number updated"}
-    else:
-        return HTTPException(status_code = 401, detail = 'Invalid Token')
-
-
-@app.put('/update/name/{username}/{new_name}')
-async def name_update(username: str, new_name: str, token: str = Depends(oauth2_schema)):
-    payload: dict = AuthHandler.decode_token(token)
-    if payload['sub'] == username:
-        scope = {"username": username, "name": new_name}
-        await DBHandler.update(scope, collection)
-        return {"status": "name updated"}
+    if payload['sub'] == user.username:
+        await DBHandler.update(user.dict(exclude_none= True), collection)
+        return {"status": "details updated"}
     else:
         return HTTPException(status_code = 401, detail = 'Invalid Token')
 
