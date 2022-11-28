@@ -19,17 +19,19 @@ class DBHandler:
         collections.insert_one(user)
 
     @classmethod
-    async def update_user_details(cls, scope: dict, collection):
+    async def update(cls, scope: dict, collection):
         collections = cls.db[f'{collection}']
-        if 'new_name' in scope:
-            collections.update_one({"username": scope['username']}, {"$set": {"name": scope['new_name']}})
-        if 'new_number' in scope:
-            collections.update_one({"username": scope['username']}, {"$set": {"phone": scope['new_number']}})
+        collections.update_one({"username": scope['username']}, {"$set": scope})
 
     @classmethod
-    async def getUserDetails(cls, username: str, collection):
+    async def fetch(cls, username: str, collection, scope: dict):
         collections = cls.db[f'{collection}']
-        user = collections.find_one({"username": username},  {"_id": 0})
+        user = collections.find_one({"username": username},  scope)
         if user is None:
             return None
         return user
+
+    @classmethod
+    async def delete(cls, username: str, collection):
+        collections = cls.db[f'{collection}']
+        collections.delete_one({"username": username})
