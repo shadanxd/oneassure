@@ -56,9 +56,9 @@ async def update(user: usermodels.UserUpdate, token: str = Depends(oauth2_schema
 @app.get('/getDetails/{username}')
 async def getDetails(username: str, token: str = Depends(oauth2_schema)):
     payload: dict = AuthHandler.decode_token(token)
-    scope = {"_id": 0, "type": 0, "password": 0}
+    excluded_fields = {"_id": 0, "type": 0, "password": 0}
     if payload['sub'] == username:
-        user = await DBHandler.fetch(username, collection, scope)
+        user = await DBHandler.fetch(username, collection, excluded_fields)
         return user
     else:
         return HTTPException(status_code = 401, detail = 'Invalid Token')
