@@ -21,9 +21,10 @@ collection = f'OneAssure{collection_name_env}'
 async def signup(user: usermodels.UserBase):
     collection_name = f'OneAssure{user.type}'
     scope = {"_id": 0}
-    if await DBHandler.fetch(user.username, collection_name, scope) is not None:
+    cursor = await DBHandler.fetch({"username": user.username}, collection_name, scope)
+    if len(list(cursor)) > 0:
         return HTTPException(status_code = 400, detail = "Username already exists")
-    await DBHandler.save(user.dict(), collection_name)
+    await DBHandler.save([user.dict()], collection_name)
     return user
 
 
@@ -32,11 +33,12 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     username = form_data.username
     password = form_data.password
     scope = {"_id": 0}
-    user = await DBHandler.fetch(username, collection, scope)
-    if user is None:
+    cursor = await DBHandler.fetch({"username": username}, collection, scope)
+    user_list = list(cursor)
+    if len(user_list) == 0:
         raise HTTPException(status_code = 401, detail = "Invalid Username")
     else:
-        if AuthHandler.verify_password(password, user['password']):
+        if AuthHandler.verify_password(password, user_list[0]['password']):
             return {"access_token": AuthHandler.encode_token(username)}
         else:
             raise HTTPException(status_code = 401, detail = "Incorrect Password")
@@ -46,7 +48,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 async def update(user: usermodels.UserUpdate, token: str = Depends(oauth2_schema)):
     payload: dict = AuthHandler.decode_token(token)
     if payload['sub'] == user.username:
-        await DBHandler.update(user.dict(exclude_none= True), collection)
+        await DBHandler.update({"username": user.username}, user.dict(exclude_none= True), collection)
         return {"status": "details updated"}
     else:
         return HTTPException(status_code = 401, detail = 'Invalid Token')
@@ -57,8 +59,8 @@ async def getDetails(username: str, token: str = Depends(oauth2_schema)):
     payload: dict = AuthHandler.decode_token(token)
     excluded_fields = {"_id": 0, "type": 0, "password": 0}
     if payload['sub'] == username:
-        user = await DBHandler.fetch(username, collection, excluded_fields)
-        return user
+        cursor = await DBHandler.fetch({"username": username}, collection, excluded_fields)
+        return list(cursor)[0]
     else:
         return HTTPException(status_code = 401, detail = 'Invalid Token')
 
@@ -67,7 +69,7 @@ async def getDetails(username: str, token: str = Depends(oauth2_schema)):
 async def deleteUser(username: str, token: str = Depends(oauth2_schema)):
     payload: dict = AuthHandler.decode_token(token)
     if payload['sub'] == username:
-        await DBHandler.delete(username, collection)
+        await DBHandler.delete({"username": username}, collection)
         return {"Deleting user": "success"}
     else:
         return HTTPException(status_code = 401, detail = 'Invalid Token')
