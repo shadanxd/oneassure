@@ -18,13 +18,13 @@ collection = f'OneAssure{collection_name_env}'
 
 
 @app.post('/signup/')
-async def signup(user: usermodels.UserBase):
+async def signup(user: usermodels.UserCred):
     collection_name = f'OneAssure{user.type}'
     scope = {"_id": 0}
-    cursor = await DBHandler.fetch({"username": user.username}, collection_name, scope)
-    if len(list(cursor)) > 0:
+    user_list = await DBHandler.fetch_one({"username": user.username}, collection_name, scope)
+    if user_list is not None:
         return HTTPException(status_code = 400, detail = "Username already exists")
-    await DBHandler.save([user.dict()], collection_name)
+    await DBHandler.save_one(user.dict(), collection_name)
     return user
 
 
@@ -33,22 +33,22 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     username = form_data.username
     password = form_data.password
     scope = {"_id": 0}
-    cursor = await DBHandler.fetch({"username": username}, collection, scope)
-    user_list = list(cursor)
-    if len(user_list) == 0:
+    user_list = await DBHandler.fetch_one({"username": username}, collection, scope)
+    if user_list is None:
         raise HTTPException(status_code = 401, detail = "Invalid Username")
     else:
-        if AuthHandler.verify_password(password, user_list[0]['password']):
+        if AuthHandler.verify_password(password, user_list['password']):
             return {"access_token": AuthHandler.encode_token(username)}
         else:
             raise HTTPException(status_code = 401, detail = "Incorrect Password")
 
 
-@app.put('/update/')
-async def update(user: usermodels.UserUpdate, token: str = Depends(oauth2_schema)):
+@app.put('/update/{username}/')
+async def update(username: str, user: usermodels.UserBase, token: str = Depends(oauth2_schema)):
     payload: dict = AuthHandler.decode_token(token)
-    if payload['sub'] == user.username:
-        await DBHandler.update({"username": user.username}, user.dict(exclude_none= True), collection)
+    print(user.dict(exclude_none = True))
+    if payload['sub'] == username:
+        await DBHandler.update_one({"username": username}, user.dict(exclude_none= True), collection)
         return {"status": "details updated"}
     else:
         return HTTPException(status_code = 401, detail = 'Invalid Token')
@@ -59,8 +59,8 @@ async def getDetails(username: str, token: str = Depends(oauth2_schema)):
     payload: dict = AuthHandler.decode_token(token)
     excluded_fields = {"_id": 0, "type": 0, "password": 0}
     if payload['sub'] == username:
-        cursor = await DBHandler.fetch({"username": username}, collection, excluded_fields)
-        return list(cursor)[0]
+        user_list = await DBHandler.fetch_one({"username": username}, collection, excluded_fields)
+        return user_list
     else:
         return HTTPException(status_code = 401, detail = 'Invalid Token')
 
@@ -69,7 +69,7 @@ async def getDetails(username: str, token: str = Depends(oauth2_schema)):
 async def deleteUser(username: str, token: str = Depends(oauth2_schema)):
     payload: dict = AuthHandler.decode_token(token)
     if payload['sub'] == username:
-        await DBHandler.delete({"username": username}, collection)
+        await DBHandler.delete_one({"username": username}, collection)
         return {"Deleting user": "success"}
     else:
         return HTTPException(status_code = 401, detail = 'Invalid Token')
