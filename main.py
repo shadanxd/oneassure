@@ -46,7 +46,6 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()):
 @app.put('/update/{username}/')
 async def update(username: str, user: usermodels.UserBase, token: str = Depends(oauth2_schema)):
     payload: dict = AuthHandler.decode_token(token)
-    print(user.dict(exclude_none = True))
     if payload['sub'] == username:
         await DBHandler.update_one({"username": username}, user.dict(exclude_none= True), collection)
         return {"status": "details updated"}
